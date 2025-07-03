@@ -12,6 +12,7 @@ import { BookOpen, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import axios from "axios"
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -28,15 +29,28 @@ export default function SignupPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await axios.post("/api/users/register", {
+        fullname: formData.name, // backend expects 'fullname'
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      })
+
       toast({
         title: "Account created successfully!",
         description: "Please login with your credentials.",
       })
       router.push("/login")
+    } catch (error: any) {
+      toast({
+        title: "Signup failed",
+        description: error.response?.data?.error || "Something went wrong.",
+        variant: "destructive",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   return (
