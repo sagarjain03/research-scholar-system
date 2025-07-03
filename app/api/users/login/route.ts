@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
                 success: true,
                 user: {
                     ...userObj,
-                    type: user.type // Ensure type is included
+                    role: user.role
                 }
             }),
             {

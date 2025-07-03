@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -21,10 +21,27 @@ import {
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { ThemeToggle } from "@/components/theme-toggle"
+import axios from "axios"
+import { useRouter } from "next/navigation"
 
 export default function ScholarDashboard() {
   const [feedback, setFeedback] = useState("")
+  const [userName, setUserName] = useState<string>("")
   const { toast } = useToast()
+  const router = useRouter()
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get("/api/users/profile")
+        setUserName(res.data.user.fullname)
+      } catch (error: any) {
+        setUserName("")
+      }
+    }
+    fetchProfile()
+  }, [])
 
   const milestones = [
     { id: 1, title: "Literature Review", status: "completed", date: "2024-01-15", progress: 100 },
@@ -48,11 +65,21 @@ export default function ScholarDashboard() {
     setFeedback("")
   }
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account.",
-    })
+  const handleLogout = async () => {
+    try {
+      await axios.post("/api/users/logout")
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      })
+      router.push("/login")
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.response?.data?.error || "Something went wrong.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -67,7 +94,9 @@ export default function ScholarDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <span className="text-gray-700 dark:text-gray-300">Welcome, John Doe</span>
+              <span className="text-gray-700 dark:text-gray-300">
+                {userName ? `Welcome, ${userName}` : "Welcome"}
+              </span>
               <Link href="/">
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="h-4 w-4 mr-2" />
