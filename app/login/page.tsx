@@ -11,6 +11,7 @@ import { BookOpen, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import axios from "axios"
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -25,24 +26,33 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call and role detection
-    setTimeout(() => {
-      // Mock role detection based on email
-      const isAdmin = formData.email.includes("admin")
+    try {
+      const response = await axios.post("/api/users/login", {
+        email: formData.email,
+        password: formData.password,
+      })
 
+      const user = response.data.user
       toast({
         title: "Login successful!",
-        description: `Welcome back, ${isAdmin ? "Admin" : "Scholar"}!`,
+        description: `Welcome back, ${user.role === "admin" ? "Admin" : "Scholar"}!`,
       })
 
       // Redirect based on role
-      if (isAdmin) {
+      if (user.role === "admin") {
         router.push("/admin/dashboard")
       } else {
         router.push("/scholar/dashboard")
       }
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.response?.data?.error || "Something went wrong.",
+        variant: "destructive",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1500)
+    }
   }
 
   return (
