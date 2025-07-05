@@ -224,74 +224,12 @@ export default function AdminDashboard() {
                         <TableCell>{scholar.progress}%</TableCell>
                         <TableCell>{scholar.lastUpdated}</TableCell>
                         <TableCell>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedScholar(scholar)}>
+                            <Link href={`/admin/scholars/${scholar.id}`}>
+                              <Button variant="ghost" size="sm">
                                 <Eye className="h-4 w-4 mr-2" />
                                 View
                               </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl dark:bg-gray-800">
-                              <DialogHeader>
-                                <DialogTitle className="dark:text-white">
-                                  Scholar Profile: {selectedScholar?.name}
-                                </DialogTitle>
-                                <DialogDescription className="dark:text-gray-300">
-                                  Detailed information about the research scholar
-                                </DialogDescription>
-                              </DialogHeader>
-                              {selectedScholar && (
-                                <div className="space-y-6">
-                                  <div className="grid md:grid-cols-2 gap-4">
-                                    <div>
-                                      <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                                        Contact Information
-                                      </h4>
-                                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                                        Email: {selectedScholar.email}
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                                        Last Updated: {selectedScholar.lastUpdated}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                                        Progress Overview
-                                      </h4>
-                                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                                        Overall Progress: {selectedScholar.progress}%
-                                      </p>
-                                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                                        Milestones: {selectedScholar.milestones.completed}/
-                                        {selectedScholar.milestones.total}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                                      Status & Prediction
-                                    </h4>
-                                    <div className="flex space-x-4">
-                                      <Badge
-                                        className={
-                                          selectedScholar.status === "On Track"
-                                            ? "bg-green-100 text-green-800"
-                                            : "bg-red-100 text-red-800"
-                                        }
-                                      >
-                                        {selectedScholar.status}
-                                      </Badge>
-                                      <Badge
-                                        variant={selectedScholar.prediction === "On Time" ? "default" : "destructive"}
-                                      >
-                                        {selectedScholar.prediction}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </DialogContent>
-                          </Dialog>
+                            </Link>
                         </TableCell>
                       </TableRow>
                     ))}
