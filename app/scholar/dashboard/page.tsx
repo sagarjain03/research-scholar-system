@@ -1,5 +1,15 @@
 "use client"
 
+import { Line } from "react-chartjs-2"
+import {
+  Chart as ChartJS,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+} from "chart.js"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -56,6 +66,83 @@ export default function ScholarDashboard() {
     })
   }
 
+  ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
+
+// Prediction data
+const predictionData = {
+  result: "On Time",
+  confidence: 72,
+  parameters: {
+    attendance: 0.08,
+    progress: -0.07,
+    published: 0.006,
+    extensions: -0.18,
+    delay: -0.23,
+    score: -0.0001,
+  },
+}
+
+// Component for Line Graph
+function PredictionGraph() {
+  const labels = Object.keys(predictionData.parameters)
+  const values = Object.values(predictionData.parameters)
+
+  const data = {
+    labels,
+    datasets: [
+      {
+        label: "Feature Weights",
+        data: values,
+        fill: false,
+        borderColor: "#3b82f6",
+        tension: 0.4,
+        pointBackgroundColor: "#3b82f6",
+        pointBorderColor: "#fff",
+        pointRadius: 5,
+      },
+    ],
+  }
+
+  const options = {
+    scales: {
+      y: {
+        beginAtZero: false,
+        grid: {
+          color: "#e5e7eb",
+        },
+        ticks: {
+          color: "#4b5563",
+        },
+        suggestedMin: -0.3,
+        suggestedMax: 0.1,
+      },
+      x: {
+        grid: {
+          color: "#e5e7eb",
+        },
+        ticks: {
+          color: "#4b5563",
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        labels: {
+          color: "#4b5563",
+        },
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+  }
+
+  return (
+    <div className="h-64 w-full">
+      <Line data={data} options={options} />
+    </div>
+  )
+}
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800">
       {/* Top Navigation */}
@@ -92,25 +179,23 @@ export default function ScholarDashboard() {
                     <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     <span className="dark:text-white">Progress Prediction</span>
                   </CardTitle>
-                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">On Track</Badge>
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                    {predictionData.result}
+                  </Badge>
                 </div>
+                <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Confidence: {predictionData.confidence}%
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-300">Overall Progress</span>
-                    <span className="font-medium">68%</span>
-                  </div>
-                  <Progress value={68} className="h-2" />
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Based on your current progress, you are on track to complete your research by December 2024. Keep up
-                    the excellent work!
-                  </p>
+              <CardContent className="space-y-4">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  Our ML model predicts your research will be <strong>{predictionData.result.toLowerCase()}</strong> based on multiple factors like attendance, progress, and deadlines.
                 </div>
+                <PredictionGraph />
               </CardContent>
             </Card>
 
-            {/* Milestone Tracker */}
+ {/* Milestone Tracker */}
             <Card className="border-0 shadow-lg dark:bg-gray-800">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

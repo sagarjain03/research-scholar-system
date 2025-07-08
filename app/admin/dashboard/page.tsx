@@ -22,7 +22,7 @@ import {
   ProgressOverviewChart,
   StatusDistributionChart,
   PerformanceTrendChart,
-  MilestoneCompletionChart,
+  AverageAttendanceChart,
 } from "@/components/admin-charts"
 import { AddScholarForm } from "@/components/add-scholar-form"
 import { ReportsSection } from "@/components/reports-section"
@@ -32,6 +32,11 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedScholar, setSelectedScholar] = useState<any>(null)
   const { toast } = useToast()
+
+  // Attendance state hooks moved to top-level to fix hooks order issue
+  const today = new Date().toISOString().split("T")[0]
+  const [attendanceDate, setAttendanceDate] = useState(today)
+  const [attendance, setAttendance] = useState<Record<number, "Present" | "Absent" | "Leave">>({})
 
   const scholars = [
     {
@@ -94,6 +99,88 @@ export default function AdminDashboard() {
         return <AddScholarForm onSuccess={() => setCurrentView("scholars")} />
       case "reports":
         return <ReportsSection />
+      case "attendance":
+        // Filter scholars again here for attendance search
+        const filteredAttendanceScholars = scholars.filter(
+          (scholar) =>
+            scholar.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            scholar.email.toLowerCase().includes(searchTerm.toLowerCase()),
+        )
+
+        const handleSaveAttendance = () => {
+          // Here you could add logic to save attendance to backend
+          toast({
+            title: "Attendance Saved",
+            description: `Attendance for ${attendanceDate} saved successfully.`,
+          })
+        }
+
+        return (
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="dark:text-white">Attendance Records</CardTitle>
+              <CardDescription className="dark:text-gray-300">
+                Mark attendance for scholars on a selected date
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-6">
+                <div className="relative flex items-center space-x-4">
+                  <Search className="h-4 w-4 text-gray-400 absolute ml-3" />
+                  <Input
+                    className="pl-10 w-64 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    placeholder="Search scholars..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Select Date:</span>
+                  <Input
+                    type="date"
+                    value={attendanceDate}
+                    onChange={(e) => setAttendanceDate(e.target.value)}
+                    className="w-40 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Attendance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAttendanceScholars.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium dark:text-white">{s.name}</TableCell>
+                      <TableCell className="dark:text-gray-300">{s.email}</TableCell>
+                      <TableCell>
+                        {(["Present", "Absent", "Leave"] as const).map((status) => (
+                          <Badge
+                            key={status}
+                            variant={attendance[s.id] === status ? "default" : "outline"}
+                            className="mr-2 cursor-pointer"
+                            onClick={() => setAttendance((prev) => ({ ...prev, [s.id]: status }))}
+                          >
+                            {status}
+                          </Badge>
+                        ))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="mt-4 text-right">
+                <Button onClick={handleSaveAttendance}>Save Attendance</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
       case "scholars":
       default:
         return (
@@ -157,7 +244,7 @@ export default function AdminDashboard() {
 
             <div className="grid lg:grid-cols-3 gap-6 mb-8">
               <PerformanceTrendChart />
-              <MilestoneCompletionChart />
+              <AverageAttendanceChart />
             </div>
 
             {/* Scholars Table */}
@@ -224,12 +311,12 @@ export default function AdminDashboard() {
                         <TableCell>{scholar.progress}%</TableCell>
                         <TableCell>{scholar.lastUpdated}</TableCell>
                         <TableCell>
-                            <Link href={`/admin/scholars/${scholar.id}`}>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4 mr-2" />
-                                View
-                              </Button>
-                            </Link>
+                          <Link href={`/admin/scholars/${scholar.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -284,6 +371,16 @@ export default function AdminDashboard() {
               <Button
                 variant="ghost"
                 className={`w-full justify-start ${
+                  currentView === "attendance" ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : ""
+                }`}
+                onClick={() => setCurrentView("attendance")}
+              >
+                <FileText className="h-4 w-4 mr-3" />
+                Attendance
+              </Button>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start ${
                   currentView === "add-scholar" ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300" : ""
                 }`}
                 onClick={() => setCurrentView("add-scholar")}
@@ -298,15 +395,15 @@ export default function AdminDashboard() {
                 }`}
                 onClick={() => setCurrentView("reports")}
               >
-                <FileText className="h-4 w-4 mr-3" />
-                View Reports
+                <TrendingUp className="h-4 w-4 mr-3" />
+                Reports
               </Button>
             </nav>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8">{renderMainContent()}</div>
+        {/* Main content */}
+        <main className="flex-1 p-6">{renderMainContent()}</main>
       </div>
     </div>
   )

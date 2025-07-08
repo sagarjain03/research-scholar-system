@@ -39,12 +39,14 @@ const performanceData = [
   { month: "Jun", avgProgress: 68 },
 ]
 
-const milestoneData = [
-  { milestone: "Literature Review", completed: 22, total: 24 },
-  { milestone: "Research Proposal", completed: 20, total: 24 },
-  { milestone: "Data Collection", completed: 15, total: 24 },
-  { milestone: "Analysis", completed: 8, total: 24 },
-  { milestone: "Thesis Writing", completed: 3, total: 24 },
+// New data for average attendance
+const attendanceData = [
+  { month: "Jan", avgAttendance: 78 },
+  { month: "Feb", avgAttendance: 81 },
+  { month: "Mar", avgAttendance: 76 },
+  { month: "Apr", avgAttendance: 83 },
+  { month: "May", avgAttendance: 85 },
+  { month: "Jun", avgAttendance: 88 },
 ]
 
 export function ProgressOverviewChart() {
@@ -183,35 +185,38 @@ export function PerformanceTrendChart() {
   )
 }
 
-export function MilestoneCompletionChart() {
+export function AverageAttendanceChart() {
   return (
     <Card className="dark:bg-gray-800">
       <CardHeader>
-        <CardTitle className="dark:text-white">Milestone Completion</CardTitle>
-        <CardDescription className="dark:text-gray-300">Progress across different research phases</CardDescription>
+        <CardTitle className="dark:text-white">Average Attendance</CardTitle>
+        <CardDescription className="dark:text-gray-300">Monthly average attendance of all scholars</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer
           config={{
-            completed: {
-              label: "Completed",
-              color: "hsl(var(--chart-1))",
-            },
-            remaining: {
-              label: "Remaining",
-              color: "hsl(var(--chart-3))",
+            avgAttendance: {
+              label: "Average Attendance",
+              color: "hsl(var(--chart-2))",
             },
           }}
           className="h-[300px]"
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={milestoneData} layout="horizontal">
+            <AreaChart data={attendanceData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis type="number" className="text-muted-foreground" />
-              <YAxis dataKey="milestone" type="category" width={120} className="text-muted-foreground" />
+              <XAxis dataKey="month" className="text-muted-foreground" />
+              <YAxis className="text-muted-foreground" />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="completed" fill="var(--color-completed)" radius={[0, 4, 4, 0]} />
-            </BarChart>
+              <Area
+                type="monotone"
+                dataKey="avgAttendance"
+                stroke="var(--color-avgAttendance)"
+                fill="var(--color-avgAttendance)"
+                fillOpacity={0.2}
+                strokeWidth={2}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
