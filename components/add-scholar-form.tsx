@@ -46,10 +46,11 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
 try {
+  const createdBy = localStorage.getItem("userEmail")
   const res = await fetch("/api/scholars/add", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...formData, milestones }),
+    body: JSON.stringify({ ...formData, milestones, createdBy }),
   })
 
   const result = await res.json()

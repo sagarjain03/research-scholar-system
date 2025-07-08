@@ -19,6 +19,10 @@ const ScholarSchema = new mongoose.Schema({
   expectedCompletion: Date,
   description: String,
   milestones: [MilestoneSchema],
+  createdBy: {
+    type: String,
+    required: true, 
+  },
 })
 
 export default mongoose.models.Scholar || mongoose.model("Scholar", ScholarSchema)
