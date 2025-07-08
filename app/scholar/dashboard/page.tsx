@@ -1,359 +1,292 @@
 "use client"
 
-import { Line } from "react-chartjs-2"
 import {
-  Chart as ChartJS,
   LineElement,
   PointElement,
   CategoryScale,
   LinearScale,
   Tooltip,
   Legend,
+  Chart as ChartJS,
 } from "chart.js"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { Line } from "react-chartjs-2"
+import { ScholarType } from "@/types"
+import { useToast } from "@/hooks/use-toast"
+import {
+  BookOpen, LogOut, Clock, CheckCircle, AlertCircle,
+  MessageSquare, Bell, TrendingUp, Calendar, User
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import {
-  BookOpen,
-  LogOut,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  MessageSquare,
-  Bell,
-  TrendingUp,
-  Calendar,
-} from "lucide-react"
 import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { User } from "lucide-react" 
+
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
 
 export default function ScholarDashboard() {
+  const [scholarData, setScholarData] = useState<ScholarType | null>(null)
+  const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState("")
   const { toast } = useToast()
 
-  const milestones = [
-    { id: 1, title: "Literature Review", status: "completed", date: "2024-01-15", progress: 100 },
-    { id: 2, title: "Research Proposal", status: "completed", date: "2024-03-20", progress: 100 },
-    { id: 3, title: "Data Collection", status: "in-progress", date: "2024-06-30", progress: 75 },
-    { id: 4, title: "Analysis & Results", status: "pending", date: "2024-09-15", progress: 0 },
-    { id: 5, title: "Thesis Writing", status: "pending", date: "2024-12-01", progress: 0 },
-  ]
+  useEffect(() => {
+    const fetchScholarData = async () => {
+      const email = localStorage.getItem("userEmail")
+      if (!email) {
+        toast({
+          title: "Error",
+          description: "No email found. Please log in again.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
 
-  const notifications = [
-    { id: 1, message: "Data Collection milestone due in 15 days", type: "warning", date: "2024-06-15" },
-    { id: 2, message: "Monthly progress report submitted successfully", type: "success", date: "2024-06-10" },
-    { id: 3, message: "Supervisor feedback available for review", type: "info", date: "2024-06-08" },
-  ]
+      try {
+        const res = await fetch("/api/scholars/get", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        })
+
+        const result = await res.json()
+        if (result.success && result.scholar) {
+          setScholarData(result.scholar)
+        } else {
+          toast({
+            title: "Error",
+            description: result.error || "Scholar not found.",
+            variant: "destructive",
+          })
+        }
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to fetch scholar data.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchScholarData()
+  }, [toast])
+
+  const handleLogout = () => {
+    localStorage.removeItem("userEmail")
+    toast({ title: "Logged out", description: "You have been logged out." })
+  }
 
   const handleFeedbackSubmit = () => {
     toast({
       title: "Feedback submitted!",
-      description: "Your feedback has been sent to your supervisor.",
+      description: "Your feedback has been sent.",
     })
     setFeedback("")
   }
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account.",
-    })
-  }
-
-  ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
-
-// Prediction data
-const predictionData = {
-  result: "On Time",
-  confidence: 72,
-  parameters: {
-    attendance: 0.08,
-    progress: -0.07,
-    published: 0.006,
-    extensions: -0.18,
-    delay: -0.23,
-    score: -0.0001,
-  },
-}
-
-// Component for Line Graph
-function PredictionGraph() {
-  const labels = Object.keys(predictionData.parameters)
-  const values = Object.values(predictionData.parameters)
-
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: "Feature Weights",
-        data: values,
-        fill: false,
-        borderColor: "#3b82f6",
-        tension: 0.4,
-        pointBackgroundColor: "#3b82f6",
-        pointBorderColor: "#fff",
-        pointRadius: 5,
-      },
-    ],
-  }
-
-  const options = {
-    scales: {
-      y: {
-        beginAtZero: false,
-        grid: {
-          color: "#e5e7eb",
-        },
-        ticks: {
-          color: "#4b5563",
-        },
-        suggestedMin: -0.3,
-        suggestedMax: 0.1,
-      },
-      x: {
-        grid: {
-          color: "#e5e7eb",
-        },
-        ticks: {
-          color: "#4b5563",
-        },
-      },
+  const predictionData = {
+    result: "On Time",
+    confidence: 72,
+    parameters: {
+      attendance: 0.08,
+      progress: -0.07,
+      published: 0.006,
+      extensions: -0.18,
+      delay: -0.23,
+      score: -0.0001,
     },
-    plugins: {
-      legend: {
-        labels: {
-          color: "#4b5563",
-        },
-      },
-    },
-    responsive: true,
-    maintainAspectRatio: false,
   }
 
-  return (
-    <div className="h-64 w-full">
-      <Line data={data} options={options} />
-    </div>
-  )
-}
+  function PredictionGraph() {
+    const labels = Object.keys(predictionData.parameters)
+    const values = Object.values(predictionData.parameters)
+
+    const data = {
+      labels,
+      datasets: [
+        {
+          label: "Feature Weights",
+          data: values,
+          fill: false,
+          borderColor: "#3b82f6",
+          tension: 0.4,
+        },
+      ],
+    }
+
+    const options = {
+      scales: {
+        y: { suggestedMin: -0.3, suggestedMax: 0.1 },
+      },
+      responsive: true,
+      maintainAspectRatio: false,
+    }
+
+    return <div className="h-64"><Line data={data} options={options} /></div>
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center">Loading scholar dashboard...</div>
+  }
+
+  if (!scholarData) {
+    return <div className="p-8 text-center text-red-500">Scholar data not found.</div>
+  }
+
+  const { name, milestones } = scholarData
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Top Navigation */}
-      <nav className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-blue-100 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-6 w-6 text-blue-600" />
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">Scholar Dashboard</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <span className="text-gray-700 dark:text-gray-300">Welcome, John Doe</span>
-              <Link href="/">
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </Link>
-            </div>
-          </div>
+      {/* Navbar */}
+      <nav className="bg-white/80 dark:bg-gray-900/80 sticky top-0 border-b px-4 py-2 flex justify-between">
+        <div className="flex items-center space-x-2">
+          <BookOpen className="h-6 w-6 text-blue-600" />
+          <span className="text-lg font-semibold dark:text-white">Scholar Dashboard</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <ThemeToggle />
+          <span className="text-gray-700 dark:text-gray-300">Welcome, {name}</span>
+          <Link href="/">
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-1" />
+              Logout
+            </Button>
+          </Link>
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Prediction Status Card */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <span className="dark:text-white">Progress Prediction</span>
-                  </CardTitle>
-                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                    {predictionData.result}
-                  </Badge>
-                </div>
-                <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Confidence: {predictionData.confidence}%
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-gray-700 dark:text-gray-300">
-                  Our ML model predicts your research will be <strong>{predictionData.result.toLowerCase()}</strong> based on multiple factors like attendance, progress, and deadlines.
-                </div>
-                <PredictionGraph />
-              </CardContent>
-            </Card>
-
- {/* Milestone Tracker */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
+      <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Prediction */}
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <div className="flex justify-between">
                 <CardTitle className="flex items-center space-x-2">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <span>Milestone Timeline</span>
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <span className="dark:text-white">Progress Prediction</span>
                 </CardTitle>
-                <CardDescription>Track your research progress through key milestones</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {milestones.map((milestone, index) => (
-                    <div key={milestone.id} className="flex items-start space-x-4">
+                <Badge className="bg-green-100 text-green-800">{predictionData.result}</Badge>
+              </div>
+              <CardDescription className="dark:text-gray-400">Confidence: {predictionData.confidence}%</CardDescription>
+            </CardHeader>
+            <CardContent><PredictionGraph /></CardContent>
+          </Card>
+
+          {/* Milestones */}
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                <span>Milestone Timeline</span>
+              </CardTitle>
+              <CardDescription>Track your milestones</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {milestones.length > 0 ? (
+                  milestones.map((m, idx) => (
+                    <div key={idx} className="flex items-start space-x-4">
+                      {/* Status Dot */}
                       <div className="flex flex-col items-center">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            milestone.status === "completed"
-                              ? "bg-green-100 text-green-600"
-                              : milestone.status === "in-progress"
-                                ? "bg-blue-100 text-blue-600"
-                                : "bg-gray-100 text-gray-400"
-                          }`}
-                        >
-                          {milestone.status === "completed" ? (
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          m.status === "completed"
+                            ? "bg-green-100 text-green-600"
+                            : m.status === "in-progress"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-gray-200 text-gray-500"
+                        }`}>
+                          {m.status === "completed" ? (
                             <CheckCircle className="h-4 w-4" />
-                          ) : milestone.status === "in-progress" ? (
+                          ) : m.status === "in-progress" ? (
                             <Clock className="h-4 w-4" />
                           ) : (
                             <AlertCircle className="h-4 w-4" />
                           )}
                         </div>
-                        {index < milestones.length - 1 && <div className="w-0.5 h-12 bg-gray-200 mt-2" />}
+                        {idx < milestones.length - 1 && <div className="w-0.5 h-12 bg-gray-300 mt-2" />}
                       </div>
+
+                      {/* Milestone Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">{milestone.title}</h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">{milestone.date}</span>
+                        <div className="flex justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium dark:text-white">{m.name}</h4>
+                            <p className="text-xs text-gray-500 mt-1 italic">{m.notes}</p>
+                          </div>
+                          <div className="text-right text-xs text-gray-500">
+                            <div>Start: {new Date(m.startDate).toLocaleDateString()}</div>
+                            <div>End: {new Date(m.endDate).toLocaleDateString()}</div>
+                          </div>
                         </div>
-                        {milestone.status === "in-progress" && (
+
+                        {m.status === "in-progress" && (
                           <div className="mt-2">
-                            <Progress value={milestone.progress} className="h-1" />
-                            <span className="text-xs text-gray-500 mt-1">{milestone.progress}% complete</span>
+                            <Progress value={50} className="h-1" />
+                            <span className="text-xs text-gray-500">50% complete</span>
                           </div>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No milestones assigned yet.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Feedback Section */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5 text-blue-600" />
-                  <span>Submit Feedback</span>
-                </CardTitle>
-                <CardDescription>Share your progress updates and concerns with your supervisor</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="feedback">Your Message</Label>
-                    <Textarea
-                      id="feedback"
-                      placeholder="Share your progress, challenges, or questions..."
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      className="mt-2 min-h-[100px]"
-                    />
-                  </div>
-                  <Button onClick={handleFeedbackSubmit} className="bg-blue-600 hover:bg-blue-700">
-                    Submit Feedback
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Feedback */}
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="h-5 w-5 text-blue-600" />
+                <span>Submit Feedback</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="feedback">Your Message</Label>
+              <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} className="mt-2 min-h-[100px]" />
+              <Button className="mt-4 bg-blue-600 hover:bg-blue-700" onClick={handleFeedbackSubmit}>
+                Submit Feedback
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Notifications */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Bell className="h-5 w-5 text-blue-600" />
-                  <span>Notifications</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full mt-2 ${
-                          notification.type === "warning"
-                            ? "bg-yellow-400"
-                            : notification.type === "success"
-                              ? "bg-green-400"
-                              : "bg-blue-400"
-                        }`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Bell className="h-5 w-5 text-blue-600" />
+                <span>Notifications</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent><p className="text-sm dark:text-gray-300">You have upcoming deadlines.</p></CardContent>
+          </Card>
 
-            {/* Quick Stats */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle>Quick Stats</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Completed Milestones</span>
-                    <span className="font-medium">2/5</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Days Until Next Deadline</span>
-                    <span className="font-medium text-orange-600">15</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Research Duration</span>
-                    <span className="font-medium">18 months</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-              {/* My Profile Link */}
-            <Card className="border-0 shadow-lg dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <span>My Profile</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Link href="/scholar/profile">
-                  <Button variant="outline" className="w-full text-blue-600 dark:text-blue-300">
-                    View Profile
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="shadow-lg dark:bg-gray-800">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-5 w-5 text-blue-600" />
+                <span>My Profile</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Link href="/scholar/profile">
+                <Button variant="outline" className="w-full text-blue-600 dark:text-blue-300">View Profile</Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   )
-  
 }
-

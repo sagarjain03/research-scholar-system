@@ -45,16 +45,22 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+try {
+  const res = await fetch("/api/scholars/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...formData, milestones }),
+  })
 
-    setTimeout(() => {
-      toast({
-        title: "Scholar added successfully!",
-        description: `${formData.name} has been added to the system.`,
-      })
+  const result = await res.json()
 
-      setFormData({
+  if (result.success) {
+    toast({
+      title: "Scholar added successfully!",
+      description: `${formData.name} has been added.`,
+    })
+
+    setFormData({ 
         name: "",
         email: "",
         phone: "",
@@ -64,12 +70,27 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
         startDate: undefined,
         expectedCompletion: undefined,
         description: "",
-      })
 
-      setMilestones([])
-      setIsLoading(false)
-      onSuccess?.()
-    }, 1500)
+    }) // reset
+    setMilestones([])
+    onSuccess?.()
+  } else {
+    toast({
+      title: "Error",
+      description: result.error || "Failed to add scholar.",
+      variant: "destructive",
+    })
+  }
+} catch (error) {
+  toast({
+    title: "Error",
+    description: "Something went wrong",
+    variant: "destructive",
+  })
+} finally {
+  setIsLoading(false)
+}
+
   }
 
   return (

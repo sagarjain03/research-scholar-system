@@ -40,8 +40,10 @@ export default function LoginPage() {
 
       // Redirect based on role
       if (user.role === "admin") {
+        localStorage.setItem("userEmail", user.email) 
         router.push("/admin/dashboard")
       } else {
+        localStorage.setItem("userEmail", user.email)
         router.push("/scholar/dashboard")
       }
     } catch (error: any) {
