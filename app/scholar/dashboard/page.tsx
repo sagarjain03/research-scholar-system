@@ -11,11 +11,13 @@ import {
 } from "chart.js"
 import { useEffect, useState } from "react"
 import { Line } from "react-chartjs-2"
+import Calendar from "react-calendar"
+import 'react-calendar/dist/Calendar.css'
 import { ScholarType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import {
   BookOpen, LogOut, Clock, CheckCircle, AlertCircle,
-  MessageSquare, Bell, TrendingUp, Calendar, User
+  MessageSquare, Bell, TrendingUp, Calendar as CalendarIcon, User
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,8 +30,41 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend)
 
+function AttendanceCalendar({ attendance }: { attendance: any[] }) {
+  const getTileClassName = ({ date }: { date: Date }) => {
+    const record = attendance.find(
+      (a) => new Date(a.date).toDateString() === date.toDateString()
+    )
+    if (!record) return ""
+    if (record.status === "Present") return "bg-green-100 text-green-700"
+    if (record.status === "Absent") return "bg-red-100 text-red-700"
+    if (record.status === "Leave") return "bg-yellow-100 text-yellow-700"
+  }
+
+  return (
+    <Card className="shadow-lg dark:bg-gray-800">
+      <CardHeader>
+        <CardTitle className="text-blue-600">My Attendance</CardTitle>
+        <CardDescription className="text-sm text-gray-600 dark:text-gray-400">Monthly overview</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Calendar
+          tileClassName={getTileClassName}
+          className="w-full rounded-lg border-none text-sm"
+        />
+        <div className="flex justify-around text-xs mt-2 text-gray-500">
+          <span className="bg-green-100 px-2 py-1 rounded">Present</span>
+          <span className="bg-red-100 px-2 py-1 rounded">Absent</span>
+          <span className="bg-yellow-100 px-2 py-1 rounded">Leave</span>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function ScholarDashboard() {
   const [scholarData, setScholarData] = useState<ScholarType | null>(null)
+  const [attendanceData, setAttendanceData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState("")
   const { toast } = useToast()
@@ -38,11 +73,7 @@ export default function ScholarDashboard() {
     const fetchScholarData = async () => {
       const email = localStorage.getItem("userEmail")
       if (!email) {
-        toast({
-          title: "Error",
-          description: "No email found. Please log in again.",
-          variant: "destructive",
-        })
+        toast({ title: "Error", description: "No email found. Please log in again.", variant: "destructive" })
         setLoading(false)
         return
       }
@@ -58,18 +89,21 @@ export default function ScholarDashboard() {
         if (result.success && result.scholar) {
           setScholarData(result.scholar)
         } else {
-          toast({
-            title: "Error",
-            description: result.error || "Scholar not found.",
-            variant: "destructive",
-          })
+          toast({ title: "Error", description: result.error || "Scholar not found.", variant: "destructive" })
+        }
+
+        const attendanceRes = await fetch("/api/attendance/get", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scholarEmail: email }),
+        })
+
+        const attendanceResult = await attendanceRes.json()
+        if (attendanceResult.success) {
+          setAttendanceData(attendanceResult.attendance)
         }
       } catch {
-        toast({
-          title: "Error",
-          description: "Failed to fetch scholar data.",
-          variant: "destructive",
-        })
+        toast({ title: "Error", description: "Failed to fetch scholar data.", variant: "destructive" })
       } finally {
         setLoading(false)
       }
@@ -84,10 +118,7 @@ export default function ScholarDashboard() {
   }
 
   const handleFeedbackSubmit = () => {
-    toast({
-      title: "Feedback submitted!",
-      description: "Your feedback has been sent.",
-    })
+    toast({ title: "Feedback submitted!", description: "Your feedback has been sent." })
     setFeedback("")
   }
 
@@ -132,19 +163,13 @@ export default function ScholarDashboard() {
     return <div className="h-64"><Line data={data} options={options} /></div>
   }
 
-  if (loading) {
-    return <div className="p-8 text-center">Loading scholar dashboard...</div>
-  }
-
-  if (!scholarData) {
-    return <div className="p-8 text-center text-red-500">Scholar data not found.</div>
-  }
+  if (loading) return <div className="p-8 text-center">Loading scholar dashboard...</div>
+  if (!scholarData) return <div className="p-8 text-center text-red-500">Scholar data not found.</div>
 
   const { name, milestones } = scholarData
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Navbar */}
       <nav className="bg-white/80 dark:bg-gray-900/80 sticky top-0 border-b px-4 py-2 flex justify-between">
         <div className="flex items-center space-x-2">
           <BookOpen className="h-6 w-6 text-blue-600" />
@@ -164,7 +189,6 @@ export default function ScholarDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Prediction */}
           <Card className="shadow-lg dark:bg-gray-800">
             <CardHeader>
               <div className="flex justify-between">
@@ -179,11 +203,10 @@ export default function ScholarDashboard() {
             <CardContent><PredictionGraph /></CardContent>
           </Card>
 
-          {/* Milestones */}
           <Card className="shadow-lg dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
+                <CalendarIcon className="h-5 w-5 text-blue-600" />
                 <span>Milestone Timeline</span>
               </CardTitle>
               <CardDescription>Track your milestones</CardDescription>
@@ -193,14 +216,11 @@ export default function ScholarDashboard() {
                 {milestones.length > 0 ? (
                   milestones.map((m, idx) => (
                     <div key={idx} className="flex items-start space-x-4">
-                      {/* Status Dot */}
                       <div className="flex flex-col items-center">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          m.status === "completed"
-                            ? "bg-green-100 text-green-600"
-                            : m.status === "in-progress"
-                            ? "bg-blue-100 text-blue-600"
-                            : "bg-gray-200 text-gray-500"
+                          m.status === "completed" ? "bg-green-100 text-green-600" :
+                          m.status === "in-progress" ? "bg-blue-100 text-blue-600" :
+                          "bg-gray-200 text-gray-500"
                         }`}>
                           {m.status === "completed" ? (
                             <CheckCircle className="h-4 w-4" />
@@ -212,8 +232,6 @@ export default function ScholarDashboard() {
                         </div>
                         {idx < milestones.length - 1 && <div className="w-0.5 h-12 bg-gray-300 mt-2" />}
                       </div>
-
-                      {/* Milestone Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between">
                           <div>
@@ -225,7 +243,6 @@ export default function ScholarDashboard() {
                             <div>End: {new Date(m.endDate).toLocaleDateString()}</div>
                           </div>
                         </div>
-
                         {m.status === "in-progress" && (
                           <div className="mt-2">
                             <Progress value={50} className="h-1" />
@@ -242,7 +259,6 @@ export default function ScholarDashboard() {
             </CardContent>
           </Card>
 
-          {/* Feedback */}
           <Card className="shadow-lg dark:bg-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -260,7 +276,6 @@ export default function ScholarDashboard() {
           </Card>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
           <Card className="shadow-lg dark:bg-gray-800">
             <CardHeader>
@@ -271,6 +286,8 @@ export default function ScholarDashboard() {
             </CardHeader>
             <CardContent><p className="text-sm dark:text-gray-300">You have upcoming deadlines.</p></CardContent>
           </Card>
+
+          <AttendanceCalendar attendance={attendanceData} />
 
           <Card className="shadow-lg dark:bg-gray-800">
             <CardHeader>

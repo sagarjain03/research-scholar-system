@@ -212,3 +212,40 @@
 .dark .text-red-800 {
   color: rgb(252 165 165);
 }
+
+
+.react-calendar {
+  background-color: white !important;
+  border: none;
+  color: #1f2937; 
+  font-family: inherit;
+}
+
+.react-calendar__tile {
+  background: transparent;
+  color: #1f2937;
+}
+
+.react-calendar__tile--now {
+  background: rgba(59, 130, 246, 0.1); /* subtle blue */
+  border-radius: 8px;
+}
+
+.react-calendar__tile--active {
+  background: rgba(59, 130, 246, 0.3);
+  color: white;
+  border-radius: 8px;
+}
+
+.react-calendar__month-view__days__day--weekend {
+  color: #ef4444; 
+}
+
+.react-calendar__navigation button {
+  background: transparent;
+  color: #1f2937;
+}
+
+.react-calendar abbr {
+  text-decoration: none;
+}
