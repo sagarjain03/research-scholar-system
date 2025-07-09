@@ -31,6 +31,8 @@ type Scholar = {
     startDate: string
     endDate: string
   }[]
+  rating?: number
+  feedback?: string
 }
 
 type Attendance = {
@@ -46,11 +48,19 @@ export function ReportsSection() {
   const [attendance, setAttendance] = useState<Attendance[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const createdBy = typeof window !== "undefined" ? localStorage.getItem("userEmail") : ""
+  const [createdBy, setCreatedBy] = useState("")
+
+  useEffect(() => {
+    const userEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : ""
+    setCreatedBy(userEmail || "")
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!createdBy) return
+      
       try {
+        setLoading(true)
         const scholarRes = await fetch(`/api/scholars/get?createdBy=${createdBy}`)
         const scholarJson = await scholarRes.json()
         const attendanceRes = await fetch(`/api/attendance/get?createdBy=${createdBy}`)
@@ -58,16 +68,20 @@ export function ReportsSection() {
 
         if (scholarJson.success) setScholars(scholarJson.scholars)
         if (attendanceJson.success) setAttendance(attendanceJson.attendance)
-
-        setLoading(false)
       } catch (error) {
         console.error("Error loading report data", error)
+        toast({
+          title: "Error",
+          description: "Failed to load report data",
+          variant: "destructive"
+        })
+      } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [createdBy])
+  }, [createdBy, toast])
 
   const handleExportReport = () => {
     toast({ title: "Exported Successfully", description: "Report downloaded (placeholder)" })
@@ -172,100 +186,97 @@ export function ReportsSection() {
       })
   }
 
-    const renderAttendanceReport = () => {
-  const grouped: Record<string, Attendance[]> = {}
-  attendance.forEach((a) => {
-    if (!grouped[a.scholarEmail]) grouped[a.scholarEmail] = []
-    grouped[a.scholarEmail].push(a)
-  })
+  const renderAttendanceReport = () => {
+    const grouped: Record<string, Attendance[]> = {}
+    attendance.forEach((a) => {
+      if (!grouped[a.scholarEmail]) grouped[a.scholarEmail] = []
+      grouped[a.scholarEmail].push(a)
+    })
 
-  return (
-    <div className="space-y-6">
-      {/* Summary Table */}
-      <Card>
-        <CardHeader><CardTitle>Scholar Attendance Summary</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Present</TableHead>
-                <TableHead>Absent</TableHead>
-                <TableHead>Leave</TableHead>
-                <TableHead>Attendance %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {scholars.map((s, i) => {
-                const records = grouped[s.email] || []
-                const total = records.length || 1
-                const present = records.filter((r) => r.status === "Present").length
-                const absent = records.filter((r) => r.status === "Absent").length
-                const leave = records.filter((r) => r.status === "Leave").length
-                const percent = Math.round((present / total) * 100)
-                return (
-                  <TableRow key={i}>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell>{present}</TableCell>
-                    <TableCell>{absent}</TableCell>
-                    <TableCell>{leave}</TableCell>
-                    <TableCell>
-                      <Progress value={percent} className="h-2 w-24" />
-                      <span className="ml-2">{percent}%</span>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Date-wise Table */}
-      <Card>
-        <CardHeader><CardTitle>Date-wise Attendance Records</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Scholar</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendance
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((record, index) => {
-                  const scholar = scholars.find(s => s.email === record.scholarEmail)
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader><CardTitle>Scholar Attendance Summary</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Present</TableHead>
+                  <TableHead>Absent</TableHead>
+                  <TableHead>Leave</TableHead>
+                  <TableHead>Attendance %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {scholars.map((s, i) => {
+                  const records = grouped[s.email] || []
+                  const total = records.length || 1
+                  const present = records.filter((r) => r.status === "Present").length
+                  const absent = records.filter((r) => r.status === "Absent").length
+                  const leave = records.filter((r) => r.status === "Leave").length
+                  const percent = Math.round((present / total) * 100)
                   return (
-                    <TableRow key={index}>
-                      <TableCell>{scholar?.name || "Unknown"}</TableCell>
-                      <TableCell>{record.scholarEmail}</TableCell>
-                      <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                    <TableRow key={i}>
+                      <TableCell>{s.name}</TableCell>
+                      <TableCell>{present}</TableCell>
+                      <TableCell>{absent}</TableCell>
+                      <TableCell>{leave}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            record.status === "Present" ? "default"
-                              : record.status === "Absent" ? "destructive"
-                              : "outline"
-                          }
-                        >
-                          {record.status}
-                        </Badge>
+                        <Progress value={percent} className="h-2 w-24" />
+                        <span className="ml-2">{percent}%</span>
                       </TableCell>
                     </TableRow>
                   )
                 })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardHeader><CardTitle>Date-wise Attendance Records</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Scholar</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attendance
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((record, index) => {
+                    const scholar = scholars.find(s => s.email === record.scholarEmail)
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>{scholar?.name || "Unknown"}</TableCell>
+                        <TableCell>{record.scholarEmail}</TableCell>
+                        <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              record.status === "Present" ? "default"
+                                : record.status === "Absent" ? "destructive"
+                                : "outline"
+                            }
+                          >
+                            {record.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const renderMilestoneReport = () => {
     return (
@@ -292,6 +303,168 @@ export function ReportsSection() {
               ))}
             </div>
           ))}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderPerformanceAnalysis = () => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Scholar Performance Evaluation</CardTitle>
+          <CardDescription>Rate and provide feedback for each scholar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Scholar</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Rating (1-10)</TableHead>
+                <TableHead>Feedback</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {scholars.map((scholar) => (
+                <TableRow key={scholar.email}>
+                  <TableCell className="font-medium">{scholar.name}</TableCell>
+                  <TableCell>{scholar.department}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={scholar.rating?.toString() || ""}
+                      onValueChange={async (value) => {
+                        try {
+                          const response = await fetch('/api/scholars', {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              email: scholar.email,
+                              rating: parseInt(value),
+                            }),
+                          });
+                          
+                          if (response.ok) {
+                            const updatedScholar = await response.json();
+                            setScholars(scholars.map(s => 
+                              s.email === scholar.email ? updatedScholar.scholar : s
+                            ));
+                            toast({
+                              title: "Success",
+                              description: "Rating updated successfully",
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Error updating rating:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to update rating",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-24">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <textarea
+                      className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Enter feedback..."
+                      value={scholar.feedback || ""}
+                      onChange={(e) => {
+                        setScholars(scholars.map(s => 
+                          s.email === scholar.email ? {...s, feedback: e.target.value} : s
+                        ));
+                      }}
+                      onBlur={async (e) => {
+                        try {
+                          const response = await fetch('/api/scholars', {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              email: scholar.email,
+                              feedback: e.target.value,
+                            }),
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error("Failed to update feedback");
+                          }
+                          toast({
+                            title: "Success",
+                            description: "Feedback saved successfully",
+                          });
+                        } catch (error) {
+                          console.error("Error updating feedback:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to save feedback",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch('/api/scholars', {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              email: scholar.email,
+                              rating: null,
+                              feedback: "",
+                            }),
+                          });
+                          
+                          if (response.ok) {
+                            const updatedScholar = await response.json();
+                            setScholars(scholars.map(s => 
+                              s.email === scholar.email ? updatedScholar.scholar : s
+                            ));
+                            toast({
+                              title: "Success",
+                              description: "Evaluation cleared",
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Error clearing evaluation:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to clear evaluation",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     )
@@ -346,22 +519,7 @@ export function ReportsSection() {
         </Card>
       )
     }
-    if (selectedReport === "performance") {
-      const data = getPerformanceMetrics()
-      return (
-        <div className="grid md:grid-cols-2 gap-4">
-          {data.map((item, idx) => (
-            <Card key={idx}>
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">{item.metric}</p>
-                <p className="text-2xl font-bold">{item.value}</p>
-                <p className="text-xs text-gray-400">{item.trend}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )
-    }
+    if (selectedReport === "performance") return renderPerformanceAnalysis()
     if (selectedReport === "attendance") return renderAttendanceReport()
     if (selectedReport === "milestones") return renderMilestoneReport()
     if (selectedReport === "alerts") {
