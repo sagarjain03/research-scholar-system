@@ -8,6 +8,17 @@ const MilestoneSchema = new mongoose.Schema({
   endDate: Date,
 })
 
+const academicContributionsSchema = new mongoose.Schema({
+  title: String,
+  type: { type: String, enum: ['Publication', 'Conference', 'Award', 'Collaboration'] },
+  date: Date,
+  description: String,
+  journalOrEvent: String,
+  impactFactor: Number,
+  link: String,
+  isPublished: Boolean
+});
+
 const ScholarSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
@@ -30,6 +41,11 @@ const ScholarSchema = new mongoose.Schema({
   },
   feedback: {
     type: String,
+  },
+  academicContributions: [academicContributionsSchema],
+    supervisorNotes: {
+    type: String,
+    default: ""
   },
 })
 
