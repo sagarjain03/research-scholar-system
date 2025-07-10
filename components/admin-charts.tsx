@@ -1,220 +1,183 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Bar, Line, Pie } from "react-chartjs-2"
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Area,
-  AreaChart,
-} from "recharts"
+  Chart as ChartJS,
+  BarElement,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+} from "chart.js"
 
-const progressData = [
-  { name: "Jan", completed: 4, inProgress: 8, pending: 12 },
-  { name: "Feb", completed: 7, inProgress: 10, pending: 7 },
-  { name: "Mar", completed: 12, inProgress: 8, pending: 4 },
-  { name: "Apr", completed: 15, inProgress: 6, pending: 3 },
-  { name: "May", completed: 18, inProgress: 4, pending: 2 },
-  { name: "Jun", completed: 20, inProgress: 3, pending: 1 },
-]
+ChartJS.register(
+  BarElement,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement
+)
 
-const statusData = [
-  { name: "On Track", value: 18, color: "hsl(var(--chart-1))" },
-  { name: "At Risk", value: 6, color: "hsl(var(--chart-2))" },
-]
+export function DashboardCharts({
+  scholars,
+  attendance,
+}: {
+  scholars: any[]
+  attendance: any[]
+}) {
+  const getProgressData = () => {
+    const data = scholars.map((s) => {
+      const completed = s.milestones.filter((m: any) => m.status === "Completed").length
+      const total = s.milestones.length || 1
+      return {
+        name: s.name,
+        progress: Math.round((completed / total) * 100),
+      }
+    })
+    return {
+      labels: data.map((d) => d.name),
+      datasets: [
+        {
+          label: "Progress %",
+          data: data.map((d) => d.progress),
+          backgroundColor: "#3b82f6",
+          borderRadius: 6,
+        },
+      ],
+    }
+  }
 
-const performanceData = [
-  { month: "Jan", avgProgress: 45 },
-  { month: "Feb", avgProgress: 52 },
-  { month: "Mar", avgProgress: 58 },
-  { month: "Apr", avgProgress: 61 },
-  { month: "May", avgProgress: 64 },
-  { month: "Jun", avgProgress: 68 },
-]
+  const getAttendanceData = () => {
+    const grouped: Record<string, number> = { Present: 0, Absent: 0, Leave: 0 }
+    attendance.forEach((a: any) => {
+      grouped[a.status] += 1
+    })
+    return {
+      labels: ["Present", "Absent", "Leave"],
+      datasets: [
+        {
+          label: "Attendance",
+          data: [grouped.Present, grouped.Absent, grouped.Leave],
+          backgroundColor: ["#10b981", "#ef4444", "#f59e0b"],
+          borderWidth: 1,
+        },
+      ],
+    }
+  }
 
-const milestoneData = [
-  { milestone: "Literature Review", completed: 22, total: 24 },
-  { milestone: "Research Proposal", completed: 20, total: 24 },
-  { milestone: "Data Collection", completed: 15, total: 24 },
-  { milestone: "Analysis", completed: 8, total: 24 },
-  { milestone: "Thesis Writing", completed: 3, total: 24 },
-]
+  const getPerformanceTrendData = () => {
+    const durations = scholars.map((s) => {
+      const end = new Date(s.expectedCompletion)
+      const start = new Date(s.startDate)
+      return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    })
 
-export function ProgressOverviewChart() {
+    return {
+      labels: scholars.map((s) => s.name),
+      datasets: [
+        {
+          label: "Duration (months)",
+          data: durations,
+          borderColor: "#8b5cf6",
+          backgroundColor: "#c4b5fd",
+          tension: 0.4,
+          fill: true,
+          pointRadius: 5,
+        },
+      ],
+    }
+  }
+
+  const getMilestoneStats = () => {
+    const milestoneCounts: Record<string, number> = {}
+    scholars.forEach((s) => {
+      s.milestones.forEach((m: any) => {
+        if (!milestoneCounts[m.name]) milestoneCounts[m.name] = 0
+        milestoneCounts[m.name] += 1
+      })
+    })
+    const labels = Object.keys(milestoneCounts)
+    const counts = Object.values(milestoneCounts)
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Milestone Frequency",
+          data: counts,
+          borderColor: "#ec4899",
+          backgroundColor: "rgba(236, 72, 153, 0.2)",
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: "#ec4899",
+          pointBorderColor: "#ec4899",
+        },
+      ],
+    }
+  }
+
   return (
-    <Card className="col-span-2 dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="dark:text-white">Progress Overview</CardTitle>
-        <CardDescription className="dark:text-gray-300">Monthly progress tracking across all scholars</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            completed: {
-              label: "Completed",
-              color: "hsl(var(--chart-1))",
-            },
-            inProgress: {
-              label: "In Progress",
-              color: "hsl(var(--chart-2))",
-            },
-            pending: {
-              label: "Pending",
-              color: "hsl(var(--chart-3))",
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={progressData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="name" className="text-muted-foreground" />
-              <YAxis className="text-muted-foreground" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="completed" stackId="a" fill="var(--color-completed)" radius={[0, 0, 4, 4]} />
-              <Bar dataKey="inProgress" stackId="a" fill="var(--color-inProgress)" />
-              <Bar dataKey="pending" stackId="a" fill="var(--color-pending)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  )
-}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="h-[400px] flex flex-col">
+        <CardHeader>
+          <CardTitle>Progress Report</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <Bar data={getProgressData()} options={{ maintainAspectRatio: false }} />
+        </CardContent>
+      </Card>
 
-export function StatusDistributionChart() {
-  return (
-    <Card className="dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="dark:text-white">Status Distribution</CardTitle>
-        <CardDescription className="dark:text-gray-300">Current status of all scholars</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            onTrack: {
-              label: "On Track",
-              color: "hsl(var(--chart-1))",
-            },
-            atRisk: {
-              label: "At Risk",
-              color: "hsl(var(--chart-2))",
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <ChartTooltip content={<ChartTooltipContent />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-        <div className="flex justify-center space-x-4 mt-4">
-          {statusData.map((entry, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-sm text-muted-foreground dark:text-gray-300">
-                {entry.name}: {entry.value}
-              </span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+      <Card className="h-[400px] flex flex-col">
+        <CardHeader>
+          <CardTitle>Attendance Report</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-full">
+          <div className="w-[250px] h-[250px]">
+            <Pie
+              data={getAttendanceData()}
+              options={{
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: "top",
+                    align: "center",
+                    labels: {
+                      boxWidth: 20,
+                      padding: 15,
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-export function PerformanceTrendChart() {
-  return (
-    <Card className="col-span-2 dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="dark:text-white">Performance Trend</CardTitle>
-        <CardDescription className="dark:text-gray-300">Average progress percentage over time</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            avgProgress: {
-              label: "Average Progress",
-              color: "hsl(var(--chart-1))",
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="month" className="text-muted-foreground" />
-              <YAxis className="text-muted-foreground" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Area
-                type="monotone"
-                dataKey="avgProgress"
-                stroke="var(--color-avgProgress)"
-                fill="var(--color-avgProgress)"
-                fillOpacity={0.2}
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  )
-}
+      <Card className="h-[400px] flex flex-col">
+        <CardHeader>
+          <CardTitle>Performance Analysis</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <Line data={getPerformanceTrendData()} options={{ maintainAspectRatio: false }} />
+        </CardContent>
+      </Card>
 
-export function MilestoneCompletionChart() {
-  return (
-    <Card className="dark:bg-gray-800">
-      <CardHeader>
-        <CardTitle className="dark:text-white">Milestone Completion</CardTitle>
-        <CardDescription className="dark:text-gray-300">Progress across different research phases</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer
-          config={{
-            completed: {
-              label: "Completed",
-              color: "hsl(var(--chart-1))",
-            },
-            remaining: {
-              label: "Remaining",
-              color: "hsl(var(--chart-3))",
-            },
-          }}
-          className="h-[300px]"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={milestoneData} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis type="number" className="text-muted-foreground" />
-              <YAxis dataKey="milestone" type="category" width={120} className="text-muted-foreground" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="completed" fill="var(--color-completed)" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+      <Card className="h-[400px] flex flex-col">
+        <CardHeader>
+          <CardTitle>Milestone Overview</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <Line data={getMilestoneStats()} options={{ maintainAspectRatio: false }} />
+        </CardContent>
+      </Card>
+    </div>
   )
 }

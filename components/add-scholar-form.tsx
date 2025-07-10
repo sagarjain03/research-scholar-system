@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,13 +10,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, UserPlus } from "lucide-react"
+import { CalendarIcon, UserPlus, PlusCircle } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
 interface AddScholarFormProps {
   onSuccess?: () => void
+}
+
+interface Milestone {
+  name: string
+  startDate?: Date
+  endDate?: Date
+  status: string
+  notes: string
 }
 
 export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
@@ -32,22 +39,29 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
     expectedCompletion: undefined as Date | undefined,
     description: "",
   })
+
+  const [milestones, setMilestones] = useState<Milestone[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+try {
+  const createdBy = localStorage.getItem("userEmail")
+  const res = await fetch("/api/scholars/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...formData, milestones, createdBy }),
+  })
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Scholar added successfully!",
-        description: `${formData.name} has been added to the system.`,
-      })
+  const result = await res.json()
 
-      // Reset form
-      setFormData({
+  if (result.success) {
+    toast({
+      title: "Scholar added successfully!",
+      description: `${formData.name} has been added.`,
+    })
+
+    setFormData({ 
         name: "",
         email: "",
         phone: "",
@@ -57,11 +71,27 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
         startDate: undefined,
         expectedCompletion: undefined,
         description: "",
-      })
 
-      setIsLoading(false)
-      onSuccess?.()
-    }, 1500)
+    }) // reset
+    setMilestones([])
+    onSuccess?.()
+  } else {
+    toast({
+      title: "Error",
+      description: result.error || "Failed to add scholar.",
+      variant: "destructive",
+    })
+  }
+} catch (error) {
+  toast({
+    title: "Error",
+    description: "Something went wrong",
+    variant: "destructive",
+  })
+} finally {
+  setIsLoading(false)
+}
+
   }
 
   return (
@@ -234,6 +264,138 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
             />
           </div>
 
+          {/* Milestones Section (Optional) */}
+          <div className="space-y-4 border-t border-gray-600 pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-blue-400">Milestones</h3>
+
+            {milestones.map((milestone, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md dark:border-gray-600 dark:bg-gray-700">
+                <div className="space-y-2">
+                  <Label>Milestone Name</Label>
+                  <Input
+                    value={milestone.name}
+                    onChange={(e) => {
+                      const updated = [...milestones]
+                      updated[index].name = e.target.value
+                      setMilestones(updated)
+                    }}
+                    className="dark:bg-gray-800 dark:border-gray-600"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={milestone.status}
+                    onValueChange={(value) => {
+                      const updated = [...milestones]
+                      updated[index].status = value
+                      setMilestones(updated)
+                    }}
+                  >
+                    <SelectTrigger className="dark:bg-gray-800 dark:border-gray-600">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="not-started">Not Started</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="missed">Missed</SelectItem>
+                      <SelectItem value="delayed">Delayed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal dark:bg-gray-800 dark:border-gray-600",
+                          !milestone.startDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {milestone.startDate ? format(milestone.startDate, "PPP") : "Select start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={milestone.startDate}
+                        onSelect={(date) => {
+                          const updated = [...milestones]
+                          updated[index].startDate = date
+                          setMilestones(updated)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal dark:bg-gray-800 dark:border-gray-600",
+                          !milestone.endDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {milestone.endDate ? format(milestone.endDate, "PPP") : "Select end date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={milestone.endDate}
+                        onSelect={(date) => {
+                          const updated = [...milestones]
+                          updated[index].endDate = date
+                          setMilestones(updated)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    value={milestone.notes}
+                    onChange={(e) => {
+                      const updated = [...milestones]
+                      updated[index].notes = e.target.value
+                      setMilestones(updated)
+                    }}
+                    placeholder="Optional notes or feedback..."
+                    className="dark:bg-gray-800 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex items-center space-x-2 text-blue-500 hover:text-blue-600"
+              onClick={() =>
+                setMilestones([
+                  ...milestones,
+                  { name: "", startDate: undefined, endDate: undefined, status: "", notes: "" },
+                ])
+              }
+            >
+              <PlusCircle className="w-5 h-5" />
+              <span>Add Milestone</span>
+            </Button>
+          </div>
+
           <div className="flex justify-end space-x-4">
             <Button
               type="button"
@@ -250,6 +412,7 @@ export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
                   expectedCompletion: undefined,
                   description: "",
                 })
+                setMilestones([])
               }}
             >
               Reset
