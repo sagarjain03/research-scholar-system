@@ -14,7 +14,7 @@ const academicContributionsSchema = new mongoose.Schema({
   date: Date,
   description: String,
   journalOrEvent: String,
-  impactFactor: Number,
+  Publications: Number,
   link: String,
   isPublished: Boolean
 });

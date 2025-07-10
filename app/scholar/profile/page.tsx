@@ -275,12 +275,12 @@ export default function ScholarProfile() {
                       />
                     </div>
                     <div>
-                      <Label>Impact Factor</Label>
+                      <Label>Publications</Label>
                       <Input
                         type="number"
                         value={contribution.impactFactor || ''}
                         onChange={(e) => handleContributionChange(index, 'impactFactor', parseFloat(e.target.value))}
-                        placeholder="Optional"
+                        placeholder="No. of publications so far"
                       />
                     </div>
                   </div>
