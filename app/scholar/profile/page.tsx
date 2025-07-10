@@ -24,6 +24,11 @@ type AcademicContribution = {
   impactFactor?: number;
   link?: string;
   isPublished?: boolean;
+  extensions?: {
+    count: number;
+    details: string;
+  };
+  delay?: number; // in months
 };
 
 type AttendanceRecord = {
@@ -89,13 +94,39 @@ export default function ScholarProfile() {
       date: new Date().toISOString().split('T')[0],
       description: "",
       journalOrEvent: "",
-      isPublished: false
+      isPublished: false,
+      extensions: {
+        count: 0,
+        details: ""
+      },
+      delay: 0
     }]);
   };
 
   const handleContributionChange = (index: number, field: string, value: any) => {
     const updated = [...contributions];
-    updated[index] = { ...updated[index], [field]: value };
+    
+    // Special handling for extensions fields
+    if (field === 'extensionsCount' || field === 'extensionsDetails') {
+      updated[index] = { 
+        ...updated[index], 
+        extensions: {
+          ...updated[index].extensions,
+          count: field === 'extensionsCount' ? parseInt(value) || 0 : updated[index].extensions?.count || 0,
+          details: field === 'extensionsDetails' ? value : updated[index].extensions?.details || ""
+        }
+      };
+      
+      // Calculate suggested delay when extensions count changes
+      if (field === 'extensionsCount') {
+        const count = parseInt(value) || 0;
+        const suggestedDelay = count * 3; // 3 months per extension as default calculation
+        updated[index].delay = suggestedDelay;
+      }
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+    
     setContributions(updated);
   };
 
@@ -315,6 +346,43 @@ export default function ScholarProfile() {
                         <span>Published</span>
                       </label>
                     </div>
+                  </div>
+
+                  {/* New Extensions and Delay Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Extensions Requested (Count)</Label>
+                      <Input
+                        type="number"
+                        value={contribution.extensions?.count || 0}
+                        onChange={(e) => handleContributionChange(index, 'extensionsCount', e.target.value)}
+                        placeholder="Number of extensions requested"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <Label>Estimated Delay (Months)</Label>
+                      <Input
+                        type="number"
+                        value={contribution.delay || 0}
+                        onChange={(e) => handleContributionChange(index, 'delay', parseInt(e.target.value))}
+                        placeholder="Estimated delay in months"
+                        min="0"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Suggested: {contribution.extensions?.count ? contribution.extensions.count * 3 : 0} months (3 months per extension)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Extensions Details</Label>
+                    <Textarea
+                      value={contribution.extensions?.details || ''}
+                      onChange={(e) => handleContributionChange(index, 'extensionsDetails', e.target.value)}
+                      placeholder="Details about the extensions requested"
+                      rows={2}
+                    />
                   </div>
 
                   <div className="flex justify-end">

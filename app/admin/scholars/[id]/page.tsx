@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import {
   BookOpen, Award, Users, Link as LinkIcon, Calendar as CalendarIcon,
-  CheckCircle, TrendingUp, FileText, Star, Clock, ArrowLeft
+  CheckCircle, TrendingUp, FileText, Star, Clock, ArrowLeft, AlertCircle
 } from "lucide-react"
 
 export default function AdminScholarProfile({ params }: { params: { id: string } }) {
@@ -216,13 +216,39 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
             <CardContent className="space-y-4">
               {scholar.academicContributions?.length > 0 ? (
                 scholar.academicContributions.map((c: any, i: number) => (
-                  <div key={i} className="border rounded-lg p-4">
+                  <div key={i} className="border rounded-lg p-4 space-y-3">
                     <div className="flex justify-between">
                       <h4 className="font-medium">{c.title}</h4>
                       <Badge variant="outline">{c.type}</Badge>
                     </div>
                     <p className="text-sm mt-1">{c.journalOrEvent}</p>
-                    <p className="text-sm text-gray-500 mt-1">{formatDate(c.date)}</p>
+                    <p className="text-sm text-gray-500">{formatDate(c.date)}</p>
+                    
+                    {/* Extension and Delay Information */}
+                    {(c.extensions?.count > 0 || c.delay > 0) && (
+                      <div className="mt-2 pt-2 border-t">
+                        <div className="flex items-center text-sm text-orange-600">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          <span>Extension Information</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-1 text-sm">
+                          <div>
+                            <span className="text-gray-500">Extensions:</span> {c.extensions?.count || 0}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Delay:</span> {c.delay || 0} months
+                          </div>
+                        </div>
+                        {c.extensions?.details && (
+                          <div className="mt-1">
+                            <p className="text-xs text-gray-500">
+                              <span className="font-medium">Details:</span> {c.extensions.details}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     {c.link && (
                       <a 
                         href={c.link} 

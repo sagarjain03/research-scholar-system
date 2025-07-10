@@ -16,7 +16,12 @@ const academicContributionsSchema = new mongoose.Schema({
   journalOrEvent: String,
   Publications: Number,
   link: String,
-  isPublished: Boolean
+  isPublished: Boolean,
+  extensions: {
+    count: Number,
+    details: String
+  },
+  delay: Number 
 });
 
 const ScholarSchema = new mongoose.Schema({
