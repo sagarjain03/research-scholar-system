@@ -1,10 +1,3 @@
-// import { ScholarProfileView } from '@/components/ScholarProfileView'
-
-// export default function ScholarProfilePage() {
-//   return <ScholarProfileView />
-// }
-
-// app/scholar/profile/page.tsx
 "use client"
 
 import { useEffect, useState } from "react";
@@ -18,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   BookOpen, Award, Users, Link as LinkIcon, Calendar as CalendarIcon,
-  CheckCircle, TrendingUp, FileText, Star, Clock
+  CheckCircle, FileText, Star, Clock
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 type AcademicContribution = {
   title: string;
@@ -32,33 +26,60 @@ type AcademicContribution = {
   isPublished?: boolean;
 };
 
+type AttendanceRecord = {
+  scholarEmail: string;
+  status: "Present" | "Absent" | "Leave";
+  date: string;
+};
+
 export default function ScholarProfile() {
   const [profile, setProfile] = useState<any>(null);
   const [contributions, setContributions] = useState<AcademicContribution[]>([]);
+  const [attendancePercentage, setAttendancePercentage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileAndAttendance = async () => {
       const email = localStorage.getItem("userEmail");
       if (!email) return;
 
       try {
-        const res = await fetch(`/api/scholars/profile?email=${email}`);
-        const data = await res.json();
+        // Fetch profile data
+        const profileRes = await fetch(`/api/scholars/profile?email=${email}`);
+        const profileData = await profileRes.json();
         
-        if (data.success) {
-          setProfile(data.profile);
-          setContributions(data.profile.academicContributions || []);
+        // Fetch attendance data
+        const attendanceRes = await fetch('/api/attendance/get', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scholarEmail: email })
+        });
+        const attendanceData = await attendanceRes.json();
+
+        if (profileData.success) {
+          setProfile(profileData.profile);
+          setContributions(profileData.profile.academicContributions || []);
+        }
+
+        if (attendanceData.success) {
+          // Calculate attendance percentage exactly like in admin reports
+          const records: AttendanceRecord[] = attendanceData.attendance;
+          if (records.length > 0) {
+            const present = records.filter(r => r.status === "Present").length;
+            const total = records.length;
+            const percent = Math.round((present / total) * 100);
+            setAttendancePercentage(percent);
+          }
         }
       } catch (error) {
-        toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to load data", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfile();
+    fetchProfileAndAttendance();
   }, [toast]);
 
   const handleAddContribution = () => {
@@ -128,15 +149,20 @@ export default function ScholarProfile() {
           <Card className="border border-blue-200">
             <CardHeader className="flex flex-row items-center space-x-4">
               <div className="p-3 bg-blue-100 rounded-full">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+                <CheckCircle className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-lg">Progress</CardTitle>
-                <CardDescription>Overall completion</CardDescription>
+                <CardTitle className="text-lg">Attendance</CardTitle>
+                <CardDescription>Overall attendance record</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">73%</div>
+              <div className="flex items-center gap-4">
+                <Progress value={attendancePercentage || 0} className="h-2 w-24" />
+                <span className="text-2xl font-bold">
+                  {attendancePercentage !== null ? `${attendancePercentage}%` : 'N/A'}
+                </span>
+              </div>
             </CardContent>
           </Card>
 

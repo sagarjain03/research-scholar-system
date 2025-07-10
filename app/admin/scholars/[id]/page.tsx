@@ -1,4 +1,3 @@
-// app/admin/scholars/[id]/page.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -20,6 +19,7 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
+  const [progressPercentage, setProgressPercentage] = useState(0)
 
   useEffect(() => {
     const fetchScholar = async () => {
@@ -28,6 +28,13 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
         const data = await res.json()
         if (data.success) {
           setScholar(data.scholar)
+          // Calculate progress percentage based on completed milestones
+          if (data.scholar.milestones?.length > 0) {
+            const completed = data.scholar.milestones.filter((m: any) => m.status === "Completed").length
+            const total = data.scholar.milestones.length
+            const percentage = Math.round((completed / total) * 100)
+            setProgressPercentage(percentage)
+          }
         } else {
           throw new Error(data.error || "Failed to fetch scholar")
         }
@@ -46,9 +53,6 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
     fetchScholar()
   }, [params.id, router, toast])
 
-  if (loading) return <div className="p-8 text-center">Loading scholar data...</div>
-  if (!scholar) return <div className="p-8 text-center text-red-500">Scholar not found</div>
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -56,6 +60,9 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
       day: "numeric"
     })
   }
+
+  if (loading) return <div className="p-8 text-center">Loading scholar data...</div>
+  if (!scholar) return <div className="p-8 text-center text-red-500">Scholar not found</div>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 p-6">
@@ -87,12 +94,15 @@ export default function AdminScholarProfile({ params }: { params: { id: string }
               </div>
               <div>
                 <CardTitle className="text-lg">Progress</CardTitle>
-                <CardDescription>Overall completion</CardDescription>
+                <CardDescription>Milestone completion</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              <Progress value={73} className="h-2" />
-              <div className="text-xl font-bold mt-2">73%</div>
+              <Progress value={progressPercentage} className="h-2" />
+              <div className="text-xl font-bold mt-2">{progressPercentage}%</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {scholar.milestones?.filter((m: any) => m.status === "Completed").length || 0} of {scholar.milestones?.length || 0} milestones completed
+              </p>
             </CardContent>
           </Card>
 
