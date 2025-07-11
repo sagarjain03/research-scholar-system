@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast"
 import { AddScholarForm } from "@/components/add-scholar-form"
 import { ReportsSection } from "@/components/reports-section"
 import { DashboardCharts } from "@/components/admin-charts"
-
 import {
   BookOpen,
   LogOut,
@@ -22,6 +21,10 @@ import {
   Search,
   Eye,
   TrendingUp,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react"
 
 export default function AdminDashboard() {
@@ -89,7 +92,8 @@ export default function AdminDashboard() {
 
     toast({
       title: "Attendance Saved",
-      description: `Attendance for ${attendanceDate} saved for ${saveResults.filter(r => r?.success).length} scholars.`,
+      description: `Attendance for ${new Date(attendanceDate).toLocaleDateString()} saved for ${saveResults.filter(r => r?.success).length} scholars.`,
+      className: "bg-green-600 text-white border-0"
     })
   }
 
@@ -101,67 +105,144 @@ export default function AdminDashboard() {
         return <ReportsSection />
       case "attendance":
         return (
-          <Card className="shadow-lg dark:bg-gray-800">
+          <Card className="shadow-xl dark:bg-gray-900/80 border border-gray-800">
             <CardHeader>
-              <CardTitle className="dark:text-white">Attendance Records</CardTitle>
-              <CardDescription className="dark:text-gray-300">
-                Mark attendance for scholars on a selected date
-              </CardDescription>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-full bg-blue-500/10">
+                  <FileText className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl font-bold text-blue-400">Attendance Records</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Mark and manage scholar attendance records
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between mb-6">
-                <div className="relative flex items-center space-x-4">
-                  <Search className="h-4 w-4 text-gray-400 absolute ml-3" />
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                <div className="relative w-full md:w-96">
+                  <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                   <Input
-                    className="pl-10 w-64 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    placeholder="Search scholars..."
+                    className="pl-10 w-full dark:bg-gray-800/50 dark:border-gray-700 focus:ring-2 focus:ring-blue-500/50"
+                    placeholder="Search scholars by name or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Select Date:</span>
-                  <Input
-                    type="date"
-                    value={attendanceDate}
-                    onChange={(e) => setAttendanceDate(e.target.value)}
-                    className="w-40 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                
+                <div className="flex items-center space-x-3 w-full md:w-auto">
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-800/50 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700">
+                    <CalendarIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+                    <Input
+                      type="date"
+                      value={attendanceDate}
+                      onChange={(e) => setAttendanceDate(e.target.value)}
+                      className="w-40 dark:bg-transparent border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveAttendance}
+                    className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-blue-500/20"
+                  >
+                    Save Attendance
+                  </Button>
                 </div>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Attendance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredScholars.map((s) => (
-                    <TableRow key={s._id}>
-                      <TableCell className="font-medium dark:text-white">{s.name}</TableCell>
-                      <TableCell className="dark:text-gray-300">{s.email}</TableCell>
-                      <TableCell>
-                        {(["Present", "Absent", "Leave"] as const).map((status) => (
-                          <Badge
-                            key={status}
-                            variant={attendanceStatus[s.email] === status ? "default" : "outline"}
-                            className="mr-2 cursor-pointer"
-                            onClick={() => setAttendanceStatus((prev) => ({ ...prev, [s.email]: status }))}
-                          >
-                            {status}
-                          </Badge>
-                        ))}
-                      </TableCell>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-100 dark:bg-gray-800/50">
+                    <TableRow>
+                      <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Scholar</TableHead>
+                      <TableHead className="font-semibold text-gray-700 dark:text-gray-300">Email</TableHead>
+                      <TableHead className="font-semibold text-gray-700 dark:text-gray-300 text-right">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredScholars.length > 0 ? (
+                      filteredScholars.map((s) => (
+                        <TableRow key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                          <TableCell className="font-medium dark:text-white">
+                            <div className="flex items-center space-x-3">
+                              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full">
+                                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <span>{s.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="dark:text-gray-300">{s.email}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-2">
+                              <Badge
+                                variant={attendanceStatus[s.email] === "Present" ? "default" : "outline"}
+                                className={`px-3 py-1 rounded-full cursor-pointer transition-all ${
+                                  attendanceStatus[s.email] === "Present" 
+                                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                }`}
+                                onClick={() => setAttendanceStatus((prev) => ({ ...prev, [s.email]: "Present" }))}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Present
+                              </Badge>
+                              <Badge
+                                variant={attendanceStatus[s.email] === "Absent" ? "default" : "outline"}
+                                className={`px-3 py-1 rounded-full cursor-pointer transition-all ${
+                                  attendanceStatus[s.email] === "Absent" 
+                                    ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                }`}
+                                onClick={() => setAttendanceStatus((prev) => ({ ...prev, [s.email]: "Absent" }))}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Absent
+                              </Badge>
+                              <Badge
+                                variant={attendanceStatus[s.email] === "Leave" ? "default" : "outline"}
+                                className={`px-3 py-1 rounded-full cursor-pointer transition-all ${
+                                  attendanceStatus[s.email] === "Leave" 
+                                    ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
+                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                }`}
+                                onClick={() => setAttendanceStatus((prev) => ({ ...prev, [s.email]: "Leave" }))}
+                              >
+                                <Clock className="h-4 w-4 mr-1" />
+                                Leave
+                              </Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                          {searchTerm ? "No matching scholars found" : "No scholars available"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-              <div className="mt-4 text-right">
-                <Button onClick={handleSaveAttendance}>Save Attendance</Button>
+              <div className="mt-6 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                <div>
+                  Showing <span className="font-medium">{filteredScholars.length}</span> of <span className="font-medium">{scholars.length}</span> scholars
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-green-500 mr-1"></span>
+                    Present: {Object.values(attendanceStatus).filter(s => s === "Present").length}
+                  </span>
+                  <span className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-red-500 mr-1"></span>
+                    Absent: {Object.values(attendanceStatus).filter(s => s === "Absent").length}
+                  </span>
+                  <span className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-yellow-500 mr-1"></span>
+                    Leave: {Object.values(attendanceStatus).filter(s => s === "Leave").length}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -184,10 +265,8 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* ✅ DASHBOARD GRAPHS SECTION */}
             <DashboardCharts scholars={scholars} attendance={attendance} />
 
-            {/* ✅ SCHOLAR TABLE */}
             <Card className="border-0 shadow-lg dark:bg-gray-800 mt-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
