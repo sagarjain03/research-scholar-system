@@ -1,5 +1,5 @@
 // app/api/scholars/profile/route.js
-import { connectDB } from "@/db/dbConfig";
+import { connectDB } from "@/app/db/dbConfig";
 import Scholar from "@/models/Scholar";
 import { NextResponse } from "next/server";
 
