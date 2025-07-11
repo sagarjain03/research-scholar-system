@@ -35,10 +35,7 @@ const ScholarSchema = new mongoose.Schema({
   expectedCompletion: Date,
   description: String,
   milestones: [MilestoneSchema],
-  createdBy: {
-    type: String,
-    required: true,
-  },
+  
   rating: {
     type: Number,
     min: 1,

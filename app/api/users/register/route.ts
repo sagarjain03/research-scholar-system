@@ -1,5 +1,6 @@
 import { connectDB} from "@/db/dbconfig";
 import User from "@/models/userModel";
+import Scholar from "@/models/Scholar";
 import { NextRequest, NextResponse } from "next/server";
 import bcryptjs from "bcryptjs";
 
@@ -8,9 +9,7 @@ connectDB();
 export async function POST(request: NextRequest) {
     try {
         const reqBody = await request.json();
-        const { fullname, email, password, role } = reqBody;
-
-        console.log(reqBody);
+        const { fullname, email, password, role } = reqBody; 
 
         // Check if user already exists
         const user = await User.findOne({ email });
@@ -25,13 +24,31 @@ export async function POST(request: NextRequest) {
 
         const newUser = new User({
             fullname,
-            email,
+            email: email.trim().toLowerCase(),
             password: hashedPassword,
             role,
         });
 
         const savedUser = await newUser.save();
-        console.log(savedUser);
+
+        // Automatically create Scholar profile if role is "scholar"
+        if (role === "scholar") {
+            const existingScholar = await Scholar.findOne({ email: email.trim().toLowerCase() }); // <-- ensure lowercase
+            if (!existingScholar) {
+                await Scholar.create({
+                    name: fullname,
+                    email: email.trim().toLowerCase(), 
+                    phone: "", 
+                    department: "",
+                    supervisor: "",
+                    researchArea: "",
+                    startDate: null,
+                    expectedCompletion: null,
+                    description: "",
+                    milestones: [],
+                });
+            }
+        }
 
         return NextResponse.json({
             message: "User created successfully",
