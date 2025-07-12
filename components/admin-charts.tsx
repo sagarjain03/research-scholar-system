@@ -32,10 +32,11 @@ export function DashboardCharts({
   scholars: any[]
   attendance: any[]
 }) {
+  // 1. Progress Report (unchanged)
   const getProgressData = () => {
     const data = scholars.map((s) => {
-      const completed = s.milestones.filter((m: any) => m.status === "Completed").length
-      const total = s.milestones.length || 1
+      const completed = s.milestones?.filter((m: any) => m.status === "Completed").length || 0
+      const total = s.milestones?.length || 1
       return {
         name: s.name,
         progress: Math.round((completed / total) * 100),
@@ -54,6 +55,7 @@ export function DashboardCharts({
     }
   }
 
+  // 2. Attendance Report (unchanged)
   const getAttendanceData = () => {
     const grouped: Record<string, number> = { Present: 0, Absent: 0, Leave: 0 }
     attendance.forEach((a: any) => {
@@ -72,19 +74,20 @@ export function DashboardCharts({
     }
   }
 
+  // 3. Performance Analysis - Now shows ratings
   const getPerformanceTrendData = () => {
-    const durations = scholars.map((s) => {
-      const end = new Date(s.expectedCompletion)
-      const start = new Date(s.startDate)
-      return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
-    })
+    const ratings = scholars.map((s) => ({
+      name: s.name,
+      // Default to 0 if no rating exists
+      rating: s.rating || 0,
+    }))
 
     return {
-      labels: scholars.map((s) => s.name),
+      labels: ratings.map((r) => r.name),
       datasets: [
         {
-          label: "Duration (months)",
-          data: durations,
+          label: "Performance Rating",
+          data: ratings.map((r) => r.rating),
           borderColor: "#8b5cf6",
           backgroundColor: "#c4b5fd",
           tension: 0.4,
@@ -95,29 +98,34 @@ export function DashboardCharts({
     }
   }
 
-  const getMilestoneStats = () => {
-    const milestoneCounts: Record<string, number> = {}
+  // 4. New: Publication Status (replaces Milestone Overview)
+  const getPublicationStats = () => {
+    const statusCounts = {
+      Published: 2,
+      Submitted: 3,
+      'In Progress': 1,
+      'Not Started': 2
+    }
+
     scholars.forEach((s) => {
-      s.milestones.forEach((m: any) => {
-        if (!milestoneCounts[m.name]) milestoneCounts[m.name] = 0
-        milestoneCounts[m.name] += 1
+      s.publications?.forEach((pub: any) => {
+        statusCounts[pub.status] += 1
       })
     })
-    const labels = Object.keys(milestoneCounts)
-    const counts = Object.values(milestoneCounts)
 
     return {
-      labels,
+      labels: Object.keys(statusCounts),
       datasets: [
         {
-          label: "Milestone Frequency",
-          data: counts,
-          borderColor: "#ec4899",
-          backgroundColor: "rgba(236, 72, 153, 0.2)",
-          tension: 0.3,
-          fill: true,
-          pointBackgroundColor: "#ec4899",
-          pointBorderColor: "#ec4899",
+          label: "Publication Status",
+          data: Object.values(statusCounts),
+          backgroundColor: [
+            "#10b981", // Published - green
+            "#3b82f6", // Submitted - blue
+            "#f59e0b", // In Progress - yellow
+            "#64748b"  // Not Started - gray
+          ],
+          borderWidth: 1,
         },
       ],
     }
@@ -163,19 +171,44 @@ export function DashboardCharts({
 
       <Card className="h-[400px] flex flex-col">
         <CardHeader>
-          <CardTitle>Performance Analysis</CardTitle>
+          <CardTitle>Performance Ratings</CardTitle>
         </CardHeader>
         <CardContent className="flex-1">
-          <Line data={getPerformanceTrendData()} options={{ maintainAspectRatio: false }} />
+          <Line 
+            data={getPerformanceTrendData()} 
+            options={{ 
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  min: 0,
+                  max: 10, // Assuming ratings are out of 10
+                  title: {
+                    display: true,
+                    text: 'Rating (out of 10)'
+                  }
+                }
+              }
+            }} 
+          />
         </CardContent>
       </Card>
 
       <Card className="h-[400px] flex flex-col">
         <CardHeader>
-          <CardTitle>Milestone Overview</CardTitle>
+          <CardTitle>Publication Status</CardTitle>
         </CardHeader>
         <CardContent className="flex-1">
-          <Line data={getMilestoneStats()} options={{ maintainAspectRatio: false }} />
+          <Bar 
+            data={getPublicationStats()} 
+            options={{ 
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              }
+            }} 
+          />
         </CardContent>
       </Card>
     </div>
