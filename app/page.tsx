@@ -4,6 +4,7 @@ import { BookOpen, Users, TrendingUp, Shield } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ThemeToggle } from "@/components/theme-toggle"
+import landingPageImg from "./src/landingPage.png";
 
 export default function LandingPage() {
   return (
@@ -81,7 +82,7 @@ export default function LandingPage() {
             <div className="relative">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 transform rotate-3 hover:rotate-0 transition-transform duration-300">
                 <Image
-                  src="/placeholder.svg?height=400&width=500"
+                  src={landingPageImg}
                   alt="Research Dashboard Preview"
                   width={500}
                   height={400}
