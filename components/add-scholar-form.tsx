@@ -10,14 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, UserPlus, PlusCircle } from "lucide-react"
+import { CalendarIcon, UserPlus, PlusCircle, Save } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
-
-interface AddScholarFormProps {
-  onSuccess?: () => void
-}
 
 interface Milestone {
   name: string
@@ -27,41 +23,111 @@ interface Milestone {
   notes: string
 }
 
-export function AddScholarForm({ onSuccess }: AddScholarFormProps) {
+interface AddScholarFormProps {
+  onSuccess?: (formData: any, milestones: Milestone[]) => void
+  initialData?: {
+    name: string
+    email: string
+    phone: string
+    department: string
+    supervisor: string
+    researchArea: string
+    startDate?: Date
+    expectedCompletion?: Date
+    description: string
+    milestones?: Milestone[]
+  }
+  editMode?: boolean
+}
+
+export function AddScholarForm({ onSuccess, initialData, editMode = false }: AddScholarFormProps) {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    department: "",
-    supervisor: "",
-    researchArea: "",
-    startDate: undefined as Date | undefined,
-    expectedCompletion: undefined as Date | undefined,
-    description: "",
+    name: initialData?.name || "",
+    email: initialData?.email || "",
+    phone: initialData?.phone || "",
+    department: initialData?.department || "",
+    supervisor: initialData?.supervisor || "",
+    researchArea: initialData?.researchArea || "",
+    startDate: initialData?.startDate || undefined,
+    expectedCompletion: initialData?.expectedCompletion || undefined,
+    description: initialData?.description || "",
   })
 
-  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [milestones, setMilestones] = useState<Milestone[]>(initialData?.milestones || [])
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
-try {
-  const createdBy = localStorage.getItem("userEmail")
-  const res = await fetch("/api/scholars/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...formData, milestones, createdBy }),
-  })
+    e.preventDefault()
+    setIsLoading(true)
+    
+    try {
+      if (editMode) {
+        // In edit mode, we call the onSuccess callback with the form data
+        onSuccess?.(formData, milestones)
+      } else {
+        // In add mode, we make the API call to create a new scholar
+        const createdBy = localStorage.getItem("userEmail")
+        const res = await fetch("/api/scholars/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...formData, milestones, createdBy }),
+        })
 
-  const result = await res.json()
+        const result = await res.json()
 
-  if (result.success) {
-    toast({
-      title: "Scholar added successfully!",
-      description: `${formData.name} has been added.`,
-    })
+        if (result.success) {
+          toast({
+            title: "Scholar added successfully!",
+            description: `${formData.name} has been added.`,
+          })
+          // Reset form only in add mode
+          setFormData({ 
+            name: "",
+            email: "",
+            phone: "",
+            department: "",
+            supervisor: "",
+            researchArea: "",
+            startDate: undefined,
+            expectedCompletion: undefined,
+            description: "",
+          })
+          setMilestones([])
+          onSuccess?.(formData, milestones)
+        } else {
+          throw new Error(result.error || "Failed to add scholar.")
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-    setFormData({ 
+  const resetForm = () => {
+    if (editMode) {
+      // In edit mode, reset to initial data
+      setFormData({
+        name: initialData?.name || "",
+        email: initialData?.email || "",
+        phone: initialData?.phone || "",
+        department: initialData?.department || "",
+        supervisor: initialData?.supervisor || "",
+        researchArea: initialData?.researchArea || "",
+        startDate: initialData?.startDate || undefined,
+        expectedCompletion: initialData?.expectedCompletion || undefined,
+        description: initialData?.description || "",
+      })
+      setMilestones(initialData?.milestones || [])
+    } else {
+      // In add mode, reset to empty form
+      setFormData({
         name: "",
         email: "",
         phone: "",
@@ -71,37 +137,25 @@ try {
         startDate: undefined,
         expectedCompletion: undefined,
         description: "",
-
-    }) // reset
-    setMilestones([])
-    onSuccess?.()
-  } else {
-    toast({
-      title: "Error",
-      description: result.error || "Failed to add scholar.",
-      variant: "destructive",
-    })
-  }
-} catch (error) {
-  toast({
-    title: "Error",
-    description: "Something went wrong",
-    variant: "destructive",
-  })
-} finally {
-  setIsLoading(false)
-}
-
+      })
+      setMilestones([])
+    }
   }
 
   return (
     <Card className="dark:bg-gray-800">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
-          <UserPlus className="h-5 w-5 text-blue-600" />
-          <span>Add New Scholar</span>
+          {editMode ? (
+            <Save className="h-5 w-5 text-blue-600" />
+          ) : (
+            <UserPlus className="h-5 w-5 text-blue-600" />
+          )}
+          <span>{editMode ? "Edit Scholar" : "Add New Scholar"}</span>
         </CardTitle>
-        <CardDescription>Enter the details of the new research scholar</CardDescription>
+        <CardDescription>
+          {editMode ? "Update the details of this research scholar" : "Enter the details of the new research scholar"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -148,7 +202,10 @@ try {
 
             <div className="space-y-2">
               <Label htmlFor="department">Department *</Label>
-              <Select onValueChange={(value) => setFormData({ ...formData, department: value })}>
+              <Select 
+                value={formData.department}
+                onValueChange={(value) => setFormData({ ...formData, department: value })}
+              >
                 <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -169,7 +226,10 @@ try {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="supervisor">Supervisor *</Label>
-              <Select onValueChange={(value) => setFormData({ ...formData, supervisor: value })}>
+              <Select
+                value={formData.supervisor}
+                onValueChange={(value) => setFormData({ ...formData, supervisor: value })}
+              >
                 <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
                   <SelectValue placeholder="Select supervisor" />
                 </SelectTrigger>
@@ -264,7 +324,7 @@ try {
             />
           </div>
 
-          {/* Milestones Section (Optional) */}
+          {/* Milestones Section */}
           <div className="space-y-4 border-t border-gray-600 pt-6 mt-6">
             <h3 className="text-lg font-semibold text-blue-400">Milestones</h3>
 
@@ -377,6 +437,21 @@ try {
                     className="dark:bg-gray-800 dark:border-gray-600"
                   />
                 </div>
+
+                <div className="md:col-span-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      const updated = [...milestones]
+                      updated.splice(index, 1)
+                      setMilestones(updated)
+                    }}
+                  >
+                    Remove Milestone
+                  </Button>
+                </div>
               </div>
             ))}
 
@@ -387,7 +462,7 @@ try {
               onClick={() =>
                 setMilestones([
                   ...milestones,
-                  { name: "", startDate: undefined, endDate: undefined, status: "", notes: "" },
+                  { name: "", startDate: undefined, endDate: undefined, status: "not-started", notes: "" },
                 ])
               }
             >
@@ -400,25 +475,20 @@ try {
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                setFormData({
-                  name: "",
-                  email: "",
-                  phone: "",
-                  department: "",
-                  supervisor: "",
-                  researchArea: "",
-                  startDate: undefined,
-                  expectedCompletion: undefined,
-                  description: "",
-                })
-                setMilestones([])
-              }}
+              onClick={resetForm}
             >
               Reset
             </Button>
-            <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-              {isLoading ? "Adding Scholar..." : "Add Scholar"}
+            <Button 
+              type="submit" 
+              disabled={isLoading} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading ? (
+                editMode ? "Updating..." : "Adding..."
+              ) : (
+                editMode ? "Update Scholar" : "Add Scholar"
+              )}
             </Button>
           </div>
         </form>
